@@ -27,13 +27,11 @@ async def fetch_adzuna_jobs(query: str, location: str) -> List[JobPosting]:
             location=item.get('location', {}).get('display_name', ''),
             description=item.get('description', '')[:1000], # truncate
             url=item.get('redirect_url', ''),
-            source='adzuna',
-            salary=f"{item.get('salary_min','')}-{item.get('salary_max','')}" or None
+            source='adzuna'
         ))
-    data = resp.json()
     print(f"ADZUNA: got {len(data.get('results', []))} results for '{query}' in '{location}'")
     for item in data.get('results', [])[:3]:
-        print(f"  - {item.get('title')} | {item.get('location', {}).get('display_name')}")    
+        print(f"  - {item.get('title')} | {item.get('location', {}).get('display_name')}")
     return jobs
 
 
@@ -54,8 +52,7 @@ async def fetch_remotive_jobs(query: str) -> List[JobPosting]:
             location=item.get('candidate_required_location', 'Remote'),
             description=item.get('description', '')[:1000],
             url=item.get('url', ''),
-            source='remotive',
-            salary=item.get('salary')
+            source='remotive'
         ))
     return jobs
 
