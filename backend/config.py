@@ -11,7 +11,7 @@ ADZUNA_APP_KEY = os.getenv('ADZUNA_APP_KEY')
 GROQ_API_KEY   = os.getenv('GROQ_API_KEY')
 
 # App settings
-MAX_JOBS_PER_FETCH = 20   # how many jobs to pull per API call
+MAX_JOBS_PER_FETCH = 5   # how many jobs to pull per API call
 LLM_MODEL = 'llama-3.3-70b-versatile'  # Groq's free fast model
 
 

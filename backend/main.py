@@ -18,6 +18,3 @@ app.include_router(jobs_router, prefix='/api')
 # Serve frontend files
 app.mount('/', StaticFiles(directory='../frontend', html=True))
 
-@app.get('/health')
-def health():
-    return {'status': 'ok'}
