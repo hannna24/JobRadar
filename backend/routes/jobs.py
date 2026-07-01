@@ -15,7 +15,7 @@ async def get_scored_jobs(profile: UserProfile):
     jobs = await fetch_all_jobs(query, profile.location, profile.remote)
     print(f"Fetched {len(jobs)} total jobs")
 
-# Filter before scoring — saves tokens and improves results
+    # Filter before scoring — saves tokens and improves results
     relevant = [j for j in jobs if is_relevant(j, profile)]
     print(f"After keyword filter: {len(relevant)} relevant jobs")
 

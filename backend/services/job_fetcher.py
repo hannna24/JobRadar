@@ -35,18 +35,6 @@ async def fetch_adzuna_jobs(query: str, location: str) -> List[JobPosting]:
     for item in data.get('results', [])[:3]:
         print(f"  - {item.get('title')} | {item.get('location', {}).get('display_name')}")    
     return jobs
-  
-    
-def is_relevant(job: JobPosting, profile) -> bool:
-    """Quick keyword check before sending to expensive LLM scorer."""
-    role_keywords = profile.role.lower().split()
-    field_keywords = profile.field.lower().split()
-    all_keywords = role_keywords + field_keywords + [s.lower() for s in profile.skills]
-    
-    job_text = f"{job.title} {job.description}".lower()
-    
-    # Job must match at least ONE keyword from role/field/skills
-    return any(kw in job_text for kw in all_keywords)
 
 
 
@@ -81,3 +69,14 @@ async def fetch_all_jobs(query: str, location: str, remote: bool = False) -> Lis
         return adzuna + remotive
     
     return adzuna
+
+def is_relevant(job: JobPosting, profile) -> bool:
+    """Quick keyword check before sending to expensive LLM scorer."""
+    role_keywords = profile.role.lower().split()
+    field_keywords = profile.field.lower().split()
+    all_keywords = role_keywords + field_keywords + [s.lower() for s in profile.skills]
+    
+    job_text = f"{job.title} {job.description}".lower()
+    
+    # Job must match at least ONE keyword from role/field/skills
+    return any(kw in job_text for kw in all_keywords)
