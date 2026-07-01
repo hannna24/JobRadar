@@ -1,17 +1,17 @@
 import asyncio
 import json
-from groq import AsyncGroq
-from models.schemas import UserProfile, JobPosting, ScoredJob
-from config import GROQ_API_KEY, LLM_MODEL
 from typing import List
 
-client = AsyncGroq(api_key=GROQ_API_KEY)
+from langchain_core.messages import HumanMessage, SystemMessage
 
-# ← ADD THIS: limits to 3 concurrent requests at a time
+from models.schemas import JobPosting, ScoredJob, UserProfile
+from utils.models import scorer_model
+
 _semaphore = asyncio.Semaphore(3)
 
 SYSTEM_PROMPT = '''You are a career matching expert. Respond ONLY
 with JSON: {"score": <1-10>, "reason": "<one sentence>"}.'''
+
 
 def build_user_prompt(profile: UserProfile, job: JobPosting) -> str:
     return f'''Candidate profile:
@@ -26,27 +26,39 @@ Job posting:
 - Company: {job.company}
 - Location: {job.location}
 - Source: {job.source}
-- Description: {job.description}
+- Description: {job.description[:500]}
 
 How well does this job match the candidate?'''
 
+
 async def score_job(profile: UserProfile, job: JobPosting) -> ScoredJob:
-    async with _semaphore:   # ← WRAP the request in the semaphore
+    async with _semaphore:
         try:
-            resp = await client.chat.completions.create(
-                model=LLM_MODEL,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": build_user_prompt(profile, job)}
-                ],
-                max_tokens=100,
-                temperature=0.1,
-            )
-            result = json.loads(resp.choices[0].message.content)
-            return ScoredJob(job=job, score=result["score"], reason=result["reason"])
-        except Exception:
-            # ← ADD THIS: one bad job won't crash the whole request
-            return ScoredJob(job=job, score=5, reason="Could not score this job.")
+            messages = [
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=build_user_prompt(profile, job)),
+            ]
+            resp = await scorer_model.ainvoke(messages)
+
+            # strip markdown fences if present
+            raw = resp.content.strip()
+            if "```" in raw:
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+
+            result = json.loads(raw.strip())
+            return ScoredJob(job=job, score=result['score'], reason=result['reason'])
+
+        except json.JSONDecodeError as e:
+            print(f"JSON PARSE ERROR for '{job.title}': {e}")
+            print(f"Raw response was: {resp.content[:200]}")
+            return ScoredJob(job=job, score=5, reason='Could not parse score.')
+
+        except Exception as e:
+            print(f"SCORING ERROR for '{job.title}': {type(e).__name__}: {e}")
+            return ScoredJob(job=job, score=5, reason='Could not score this job.')
+
 
 async def score_all_jobs(profile: UserProfile, jobs: List[JobPosting]) -> List[ScoredJob]:
     scored = await asyncio.gather(*[score_job(profile, j) for j in jobs])
